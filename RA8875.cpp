@@ -3759,7 +3759,11 @@ void RA8875::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
 void RA8875::fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
 {
 	_center_helper(x0,y0);
-	if (r <= 0) return;
+	if (r < 1) return;
+	if (r < 2) {
+		drawPixel(x0,y0,color);
+		return;
+	}
 	_circle_helper(x0, y0, r, color, true);
 }
 
