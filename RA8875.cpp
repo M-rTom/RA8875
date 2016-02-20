@@ -3497,8 +3497,8 @@ void RA8875::drawLineAngle(int16_t x, int16_t y, int16_t angle, uint16_t length,
 		drawLine(
 		x,
 		y,
-		x + (length * _cosDeg_helper(angle + offset)),//_angle_offset
-		y + (length * _sinDeg_helper(angle + offset)), 
+		x + round((length-1) * _cosDeg_helper(angle + offset)),//_angle_offset
+		y + round((length-1) * _sinDeg_helper(angle + offset)), 
 		color);
 	}
 }
@@ -3521,10 +3521,10 @@ void RA8875::drawLineAngle(int16_t x, int16_t y, int16_t angle, uint16_t start, 
 		drawPixel(x,y,color);
 	} else {
 		drawLine(
-		x + start * _cosDeg_helper(angle + offset),//_angle_offset
-		y + start * _sinDeg_helper(angle + offset),
-		x + (start + length) * _cosDeg_helper(angle + offset),
-		y + (start + length) * _sinDeg_helper(angle + offset), 
+		x + round(start * _cosDeg_helper(angle + offset)),//_angle_offset
+		y + round(start * _sinDeg_helper(angle + offset)),
+		x + round((start + length-1) * _cosDeg_helper(angle + offset)),
+		y + round((start + length-1) * _sinDeg_helper(angle + offset)), 
 		color);
 	}
 }
