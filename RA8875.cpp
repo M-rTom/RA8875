@@ -4126,7 +4126,7 @@ void RA8875::fillEllipse(int16_t xCenter, int16_t yCenter, int16_t longAxis, int
       yCenter:   y location of the ellipse center
       longAxis:  Size in pixels of the long axis
       shortAxis: Size in pixels of the short axis
-      curvePart: Curve to draw in clock-wise dir: 0[180-270°],1[270-0°],2[0-90°],3[90-180°]
+      curvePart: Curve to draw in clock-wise dir: 0[180-270Â°],1[270-0Â°],2[0-90Â°],3[90-180Â°]
       color: RGB565 color
 */
 /**************************************************************************/
@@ -4151,7 +4151,7 @@ void RA8875::drawCurve(int16_t xCenter, int16_t yCenter, int16_t longAxis, int16
       yCenter:   y location of the ellipse center
       longAxis:  Size in pixels of the long axis
       shortAxis: Size in pixels of the short axis
-      curvePart: Curve to draw in clock-wise dir: 0[180-270°],1[270-0°],2[0-90°],3[90-180°]
+      curvePart: Curve to draw in clock-wise dir: 0[180-270Â°],1[270-0Â°],2[0-90Â°],3[90-180Â°]
       color: RGB565 color
 */
 /**************************************************************************/
@@ -4301,6 +4301,21 @@ void RA8875::_rect_helper(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c
 	_waitPoll(RA8875_DCR, RA8875_DCR_LINESQUTRI_STATUS);
 }
 
+/**************************************************************************/
+/*!
+      check area of a triangle
+	  [private]
+*/
+/**************************************************************************/
+float RA8875::_check_area(int16_t Ax, int16_t Ay, int16_t Bx, int16_t By, int16_t Cx, int16_t Cy) {
+  float area = abs(Ax * (By - Cy) + Bx * (Cy - Ay) + Cx * (Ay - By));     // Calc area
+  float mag1 = sqrt((Bx - Ax) * (Bx - Ax) + (By - Ay) * (By - Ay));       // Calc side lengths
+  float mag2 = sqrt((Cx - Ax) * (Cx - Ax) + (Cy - Ay) * (Cy - Ay));
+  float mag3 = sqrt((Cx - Bx) * (Cx - Bx) + (Cy - By) * (Cy - By));
+  float magmax = (mag1>mag2?mag1:mag2)>mag3?(mag1>mag2?mag1:mag2):mag3;   // Find largest length
+
+  return area/magmax;                                                     // Return area
+}
 
 /**************************************************************************/
 /*!
@@ -4315,40 +4330,33 @@ void RA8875::_triangle_helper(int16_t x0, int16_t y0, int16_t x1, int16_t y1, in
 	
 	if (_portrait) {swapvals(x0,y0); swapvals(x1,y1); swapvals(x2,y2);}
 	
-	if (x0 == x1 && y0 == y1){
-		drawLine(x0, y0, x2, y2,color);
-		return;
-	} else if (x0 == x2 && y0 == y2){
-		drawLine(x0, y0, x1, y1,color);
-		return;
-	} else if (x0 == x1 && y0 == y1 && x0 == x2 && y0 == y2) {//new
-        drawPixel(x0, y0, color);
-		return;
-	}
-	
+	if (y0 > y1) {swapvals(y0, y1); swapvals(x0, x1);}			// Sort points from Y < to >
+	if (y1 > y2) {swapvals(y2, y1); swapvals(x2, x1);}
 	if (y0 > y1) {swapvals(y0, y1); swapvals(x0, x1);}
-	
-    if (y1 > y2) {swapvals(y2, y1); swapvals(x2, x1);}
-	
-    if (y0 > y1) {swapvals(y0, y1); swapvals(x0, x1);}
-	
-	if (y0 == y2) { // Handle awkward all-on-same-line case as its own thing
-		int16_t a, b;
-        a = b = x0;
-		if (x1 < a) {     
-			a = x1;
-		} else if (x1 > b) {
-			b = x1;
-		}
-        if (x2 < a) { 
-			a = x2;
-		} else if (x2 > b) {
-			b = x2;
-		}
-        drawFastHLine(a, y0, b-a+1, color);
-        return;
-    }
-	
+
+	// Avoid drawing lines here due to hardware bug in certain circumstances when a
+	// specific shape triangle is drawn after a line. This bug can still happen, but
+	// at least the user has control over fixing it.
+	// Not drawing a line here is slower, but drawing a non-filled "triangle" is
+	// slightly faster than a filled "triangle".
+	//
+	// bug example: tft.drawLine(799,479, 750,50, RA8875_BLUE)
+	//              tft.fillTriangle(480,152, 456,212, 215,410, RA8875_GREEN)
+	//
+	if (x0 == x1 && y0 == y1 && x0 == x2 && y0 == y2) {			// All points are same
+		drawPixel(x0,y0, color);
+		return;
+	} else if ((x0 == x1 && y0 == y1) || (x0 == x2 && y0 == y2) || (x1 == x2 && y1 == y2))
+		filled = false;									// Two points are same
+	else if (x0 == x1 && x0 == x2)
+		filled = false;									// Vertical line
+	else if (y0 == y1 && y0 == y2)
+		filled = false;									// Horizontal line
+
+	if (filled)
+		if (_check_area(x0,y0, x1,y1, x2,y2) < 0.85)
+			filled = false;			// Draw non-filled triangle to avoid filled triangle
+								// bug when two vertices are close together.
 	if (_textMode) _setTextMode(false);//we are in text mode?
 	
 	#if defined(USE_RA8875_SEPARATE_TEXT_COLOR)
@@ -4356,12 +4364,7 @@ void RA8875::_triangle_helper(int16_t x0, int16_t y0, int16_t x1, int16_t y1, in
 	#endif
 	if (color != _foreColor) setForegroundColor(color);//0.69b30 avoid several SPI calls
 	
-	//_checkLimits_helper(x0,y0);
-	//_checkLimits_helper(x1,y1);
-	
 	_line_addressing(x0,y0,x1,y1);
-	//p2
-
 	_writeRegister(RA8875_DTPH0,    x2 & 0xFF);
 	_writeRegister(RA8875_DTPH0 + 1,x2 >> 8);
 	_writeRegister(RA8875_DTPV0,    y2 & 0xFF);
