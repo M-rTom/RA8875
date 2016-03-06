@@ -3827,7 +3827,11 @@ void RA8875::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
 void RA8875::fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
 {
 	_center_helper(x0,y0);
-	if (r <= 0) return;
+	if (r < 1) return;
+	if (r == 1) {
+		drawPixel(x0,y0,color);
+		return;
+	}
 	_circle_helper(x0, y0, r, color, true);
 }
 
@@ -4126,7 +4130,7 @@ void RA8875::fillEllipse(int16_t xCenter, int16_t yCenter, int16_t longAxis, int
       yCenter:   y location of the ellipse center
       longAxis:  Size in pixels of the long axis
       shortAxis: Size in pixels of the short axis
-      curvePart: Curve to draw in clock-wise dir: 0[180-270°],1[270-0°],2[0-90°],3[90-180°]
+      curvePart: Curve to draw in clock-wise dir: 0[180-270Â°],1[270-0Â°],2[0-90Â°],3[90-180Â°]
       color: RGB565 color
 */
 /**************************************************************************/
@@ -4151,7 +4155,7 @@ void RA8875::drawCurve(int16_t xCenter, int16_t yCenter, int16_t longAxis, int16
       yCenter:   y location of the ellipse center
       longAxis:  Size in pixels of the long axis
       shortAxis: Size in pixels of the short axis
-      curvePart: Curve to draw in clock-wise dir: 0[180-270°],1[270-0°],2[0-90°],3[90-180°]
+      curvePart: Curve to draw in clock-wise dir: 0[180-270Â°],1[270-0Â°],2[0-90Â°],3[90-180Â°]
       color: RGB565 color
 */
 /**************************************************************************/
